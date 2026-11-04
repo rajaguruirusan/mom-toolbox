@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+.venv_build/
+build/
+dist/
+release/
+ffmpeg/
+ffmpeg_x/
+ffmpeg.zip
+*.wav
+*.mp3
+*.mp4
+*.log
+.streamlit/secrets.toml
