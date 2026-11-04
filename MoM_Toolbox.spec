@@ -18,7 +18,7 @@ hiddenimports = [
     "ctypes.wintypes",
 ]
 
-for pkg in ["streamlit", "faster_whisper", "ctranslate2", "av", "tokenizers", "pyaudiowpatch", "moviepy", "proglog"]:
+for pkg in ["streamlit", "faster_whisper", "ctranslate2", "av", "tokenizers", "pyaudiowpatch", "moviepy", "proglog", "hf_xet"]:
     try:
         d, b, h = collect_all(pkg)
         datas += d
@@ -39,7 +39,7 @@ for pkg in [
 
 for dist in [
     "streamlit", "faster-whisper", "ctranslate2", "tokenizers", "huggingface-hub", "tqdm",
-    "requests", "packaging", "filelock", "numpy", "regex", "imageio", "moviepy",
+    "requests", "packaging", "filelock", "numpy", "regex", "imageio", "moviepy", "hf-xet",
     "anthropic", "google-genai", "ollama", "httpx", "pydantic", "uvicorn", "starlette",
 ]:
     try:
