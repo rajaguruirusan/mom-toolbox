@@ -19,6 +19,16 @@ Go to the **[Releases](../../releases/latest)** page and download one of these (
 
 The installer is not code-signed, so Windows may show **"Windows protected your PC"**. Click **More info → Run anyway**.
 
+### Verify your download
+
+Each release includes `SHA256SUMS.txt`. In PowerShell, run:
+
+```powershell
+Get-FileHash .\MoM_Toolbox_Setup_vX.Y.Z.exe -Algorithm SHA256
+```
+
+The hash must match the line for that file in `SHA256SUMS.txt`.
+
 ## Using it
 
 - Start **MoM Toolbox**. A console window opens and the app opens in your browser. Keep the console window open while you use the app; close it to quit.
@@ -41,13 +51,13 @@ cd mom-toolbox
 BUILD.bat
 ```
 
-`BUILD.bat` creates a build environment, downloads ffmpeg, builds the app with PyInstaller and packages it with Inno Setup. The results are in the `release` folder.
+`BUILD.bat` creates a build environment, installs the exact package versions in `requirements-lock.txt` (every download is hash-checked), downloads a pinned ffmpeg build and checks its SHA-256, builds the app with PyInstaller and packages it with Inno Setup. The results are in the `release` folder.
 
 To run from source without building:
 
 ```bat
 py -3.12 -m venv .venv
-.venv\Scripts\pip install -r requirements.txt
+.venv\Scripts\pip install --require-hashes -r requirements-lock.txt
 .venv\Scripts\python launcher.py
 ```
 
@@ -60,7 +70,13 @@ Releases are built automatically by GitHub Actions (`.github/workflows/release.y
 - **Actions → Build and Release → Run workflow**, enter a version such as `1.1.0`, or
 - push a tag such as `v1.1.0`.
 
-The workflow builds the installer and the portable zip on Windows and attaches them to a new release.
+The workflow builds the installer and the portable zip on Windows and attaches them, with `SHA256SUMS.txt`, to a new release. The build uses hash-locked Python packages, checksum-verified ffmpeg and Inno Setup downloads, and GitHub Actions pinned to exact commits.
+
+To update dependencies, edit `requirements.txt`, then regenerate the lockfile:
+
+```bash
+uv pip compile requirements.txt build-tools.in --python-platform x86_64-pc-windows-msvc --python-version 3.12 --generate-hashes --no-header --no-annotate -o requirements-lock.txt
+```
 
 ## Project layout
 
@@ -78,4 +94,4 @@ The workflow builds the installer and the portable zip on Windows and attaches t
 
 GNU General Public License v3.0. See [LICENSE](LICENSE).
 
-The packaged app includes ffmpeg builds from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/), licensed under GPL v3.
+The packaged app includes ffmpeg 9.0.2 "essentials" builds from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) (downloaded from the [GyanD/codexffmpeg](https://github.com/GyanD/codexffmpeg) GitHub releases), licensed under GPL v3.

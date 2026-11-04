@@ -4,7 +4,8 @@ title MoM Toolbox - Build
 cd /d "%~dp0"
 
 set "BUILD_PY=%~dp0.venv_build\Scripts\python.exe"
-set "FFMPEG_URL=https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+set "FFMPEG_URL=https://github.com/GyanD/codexffmpeg/releases/download/9.0.2/ffmpeg-9.0.2-essentials_build.zip"
+set "FFMPEG_SHA256=60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba"
 
 echo ============================================================
 echo  MoM Toolbox - building Setup.exe and Portable.zip
@@ -22,9 +23,8 @@ if not exist "%BUILD_PY%" (
 )
 
 echo.
-echo [2/6] Installing packages...
-"%BUILD_PY%" -m pip install --upgrade pip
-"%BUILD_PY%" -m pip install -r "%~dp0requirements.txt" pyinstaller
+echo [2/6] Installing packages (hash-verified)...
+"%BUILD_PY%" -m pip install --require-hashes -r "%~dp0requirements-lock.txt"
 if errorlevel 1 goto :fail
 
 echo.
@@ -32,6 +32,11 @@ echo [3/6] Getting ffmpeg...
 if not exist "%~dp0ffmpeg\ffmpeg.exe" (
     curl -L -o "%TEMP%\mom_ffmpeg.zip" "%FFMPEG_URL%"
     if errorlevel 1 goto :fail
+    powershell -NoProfile -Command "if ((Get-FileHash -LiteralPath '%TEMP%\mom_ffmpeg.zip' -Algorithm SHA256).Hash -ne '%FFMPEG_SHA256%') { exit 1 }"
+    if errorlevel 1 (
+        echo ERROR: ffmpeg download failed the checksum check.
+        goto :fail
+    )
     if exist "%TEMP%\mom_ffmpeg_x" rmdir /s /q "%TEMP%\mom_ffmpeg_x"
     mkdir "%TEMP%\mom_ffmpeg_x"
     tar -xf "%TEMP%\mom_ffmpeg.zip" -C "%TEMP%\mom_ffmpeg_x"
