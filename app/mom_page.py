@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import json
 
@@ -11,6 +12,7 @@ import tempfile
 from moviepy.editor import VideoFileClip
 from pydub import AudioSegment
 from faster_whisper import WhisperModel
+import huggingface_hub
 from datetime import timedelta
 import ollama
 import math
@@ -28,6 +30,8 @@ AudioSegment.ffprobe   = toolbox_paths.ffprobe_exe()
 
 # ---------- Config ----------
 CHUNK_DURATION_MIN = 5   # minutes per transcription chunk
+WHISPER_REPO = "Systran/faster-whisper-base"
+WHISPER_FILES = ["config.json", "preprocessor_config.json", "model.bin", "tokenizer.json", "vocabulary.*"]
 GAP_THRESHOLD = 1.5      # seconds of silence to start new paragraph
 
 # ---------- Helper Functions ----------
@@ -139,15 +143,47 @@ def group_into_paragraphs(segments, offset: float) -> list:
         )
     return paragraphs
 
+def _whisper_files_ok(model_dir: str) -> bool:
+    model_bin = os.path.join(model_dir, "model.bin")
+    return (
+        os.path.isfile(model_bin)
+        and os.path.getsize(model_bin) > 50 * 1024 * 1024
+        and os.path.isfile(os.path.join(model_dir, "config.json"))
+        and os.path.isfile(os.path.join(model_dir, "tokenizer.json"))
+    )
+
+
+@st.cache_resource(show_spinner=False)
+def load_whisper_model():
+    model_dir = toolbox_paths.models_dir("faster-whisper-base")
+    last_error = None
+    for attempt in range(2):
+        try:
+            if not _whisper_files_ok(model_dir):
+                huggingface_hub.snapshot_download(WHISPER_REPO, local_dir=model_dir, allow_patterns=WHISPER_FILES)
+            if not _whisper_files_ok(model_dir):
+                raise RuntimeError("model files are missing or incomplete after download")
+            return WhisperModel(model_dir, device="cpu", compute_type="int8")
+        except Exception as e:
+            last_error = e
+            shutil.rmtree(model_dir, ignore_errors=True)
+    raise RuntimeError(
+        f"Could not download or load the Whisper model ({last_error}). "
+        f"The first transcription needs internet access to huggingface.co; some office networks block it. "
+        f"Alternatively, copy the files of {WHISPER_REPO} (config.json, model.bin, tokenizer.json, vocabulary.txt) "
+        f"into: {model_dir}"
+    )
+
+
 def transcribe_audio_chunked(audio_path, progress_bar, status_text):
     """Transcribe audio using faster-whisper with chunked processing and progress bar."""
     status_text.text("Splitting audio into chunks...")
     chunks = split_audio_to_chunks(audio_path, CHUNK_DURATION_MIN)
     total_chunks = len(chunks)
 
-    status_text.text("Loading faster-whisper model...")
+    status_text.text("Loading faster-whisper model (first time: downloading ~145 MB)...")
     progress_bar.progress(0)
-    model = WhisperModel("base", device="cpu", compute_type="int8")
+    model = load_whisper_model()
 
     all_paragraphs = []
     for idx, (chunk_path, offset) in enumerate(chunks):
