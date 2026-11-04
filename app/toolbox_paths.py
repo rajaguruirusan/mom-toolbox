@@ -61,3 +61,10 @@ def recordings_dir():
     d = os.path.join(_documents_dir(), "MoM Toolbox", "Recordings")
     os.makedirs(d, exist_ok=True)
     return d
+
+
+def models_dir(name):
+    base = os.environ.get("LOCALAPPDATA") or os.path.join(os.path.expanduser("~"), ".cache")
+    d = os.path.join(base, "MoM Toolbox", "models", name)
+    os.makedirs(d, exist_ok=True)
+    return d
